@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Sat Dec 30 12:02:51 2017
-
+make_shape.py
+currently limited to regular polyhedrons, quadrilaterals and lines
 @author: jason
+dependencies: Numpy
 """
 import numpy as np
 
@@ -12,19 +11,19 @@ pos = np.array([[0, 0, 0], [0.5, 0, 0], [0, 0.5, 0], [0.5, 0.5, 0],
 
 
 class Make_shape():
-    """Makes a 1, 2, 3D shape object from preset cube vertices
+    """Makes a 1, 2, 3D shape object from pre-set cube vertices
     """
     def __init__(self, dimension):
         self.dimension = dimension
         if self.dimension > 3 or self.dimension < 0:
-            raise ValueError("how many space dimensions can we display? Not"
-                             "the number you chose!")
+            raise ValueError("Too many dimensions, we live in 3D")
         self.pos = np.array([[0, 0, 0], [0.5, 0, 0], [0, 0.5, 0],
                              [0.5, 0.5, 0], [0, 0, 0.5],
                              [0.5, 0, 0.5], [0, 0.5, 0.5], [0.5, 0.5, 0.5]])
 
     def verts(self):
         """picks out apprppriate number of vertices for a n-dimensional shape
+        from the reference cube
         """
         if self.dimension == 1:
             verts = np.array([pos[0], pos[1]])
@@ -67,17 +66,14 @@ class Make_shape():
             if np.count_nonzero(dif[i]) == 1:
                 results = vec[i]
                 fvec = np.append(fvec, [results], axis=0)
-        
+
         X = np.empty((0, N))
         for d in range(len(fvec)):
             for k in range(len(fvec[d][0])):
                 f = fvec[d][0][k]
                 s = fvec[d][1][k]
                 result = np.array([np.linspace(f, s, N)])
-                X=np.append(X, result, axis=0)
+                X = np.append(X, result, axis=0)
                 X2 = np.transpose(X)
         X3 = np.hsplit(X2, len(fvec))
         return X3
-
-        
-        
