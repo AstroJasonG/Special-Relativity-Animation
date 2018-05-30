@@ -34,7 +34,7 @@ def startup(fname, dimension, npoints, anim, dcamera, shift=[0, 0, 0], beta=0):
         linepos1: Initial points used for additional shapes
         *tid: Initialization of time variable used in Update() - do not change
         *beta: Initialization of beta - do not change
-        dcamera:
+        dcamera: float, physical camera distance from origin
     """
     cube = Make_shape(dimension)
     verts = cube.verts()
@@ -49,15 +49,15 @@ def startup(fname, dimension, npoints, anim, dcamera, shift=[0, 0, 0], beta=0):
     else:
         beta = 0
     tid = 0
-    return(fname, dimension, npoints, anim, linepos, linepos0, linepos1, tid, beta,
-           dcamera)
+    return(fname, dimension, npoints, anim, linepos, linepos0, linepos1, tid,
+           beta, dcamera)
 
 
 # Change inputs of this function to visual you want to produce
-(fname, dimension, npoints, anim, linepos, linepos0, linepos1, tid, beta, d,
- ) = startup(
-         fname="test", dimension=1, npoints=50, anim=0, dcamera=0.5,
-         shift=[-0.25, 0, 0], beta=0.99)
+(fname, dimension, npoints, anim, linepos, linepos0, linepos1, tid, beta,
+    dcamera) = startup(
+         fname="PT_bold", dimension=1, npoints=50, anim=1, dcamera=1,
+         shift=[0, 0, 0], beta=0)
 
 # --------------------------Canvas setup-------------------------------------
 """ Setup of Vispy canvas objects, see Vispy documentation for details
@@ -91,7 +91,7 @@ def visualsetup(title, linespos=linepos, linepos0=linepos0, linepos1=linepos1,
     lines0 = np.empty(0,)
     lines1 = np.empty(0,)
     for k in range(len(linepos)):
-        result = np.array([visuals.LinePlot(linepos[k], width=2,
+        result = np.array([visuals.LinePlot(linepos[k], width=4,
                                             marker_size=0, connect="strip")])
         result2 = np.array([visuals.LinePlot(
                 linepos0[k], color='pink', width=2, marker_size=0,
@@ -110,24 +110,24 @@ def visualsetup(title, linespos=linepos, linepos0=linepos0, linepos1=linepos1,
             view.add(lines1[j])
 
     axis = visuals.XYZAxis(parent=view.scene)
-    titletext = visuals.Text(text=title, color="white", pos=(0, 0, 1.2),
-                             font_size=1000)
+    titletext = visuals.Text(text=title, color="white", pos=(0, 0, -0.5),
+                             font_size=30)
     view.add(titletext)
 
     if LT and dimension == 1 and anim in [1, 2]:
         """ Some labels for when comparing Lorentz to Penrose-Terrell
         """
         text1 = visuals.Text(text="Lorentz ", color="white",
-                             pos=(-0.2, 0, 0.5), font_size=1000)
+                             pos=(-0.2, 0, 0.5), font_size=40)
         view.add(text1)
         text2 = visuals.Text(text="Loretnz + optical", color="white",
-                             pos=(-0.4, 0, 0), font_size=1000)
+                             pos=(-0.4, 0, 0), font_size=40)
         view.add(text2)
     return lines, lines0, lines1, axis, compare, LT
 
 
 lines, lines0, lines1, axis, compare, LT = visualsetup(
-        "", compare=False, LT=True)
+        "Penrose Terrell Rotation (1D)", compare=False, LT=False)
 
 
 def update(ev):
@@ -159,17 +159,17 @@ def update(ev):
 # ----------------------Transformation----------------------------------------
     T = Transform(beta)
     if dimension == 1:
-        linepos[0][:, 0] = T.PT(linepos0, d, 0)
+        linepos[0][:, 0] = T.PT(linepos0, dcamera, 0)
         if LT:
             linepos1[0][:, 0] = linepos0[0][:, 0] / T.LT()[2]
     elif dimension == 2:
         for k in range(4):
-            linepos[k][:, 0] = T.PT(linepos0, d, k)
+            linepos[k][:, 0] = T.PT(linepos0, dcamera, k)
             if LT:
                 linepos1[k][:, 0] = linepos0[k][:, 0] / T.LT()[2]
     elif dimension == 3:
         for k in range(len(lines)):
-            linepos[k][:, 0] = T.PT(linepos0, d, k)
+            linepos[k][:, 0] = T.PT(linepos0, dcamera, k)
 # -------------------------setting data to lines------------------------------
     fcolor = '#04f2ff'
     bcolor = '#ff0479'
@@ -180,9 +180,9 @@ def update(ev):
                 lines1[j].set_data(linepos1[j], marker_size=1, color="pink")
         elif dimension == 3:
             lines[j].set_data(linepos[j], marker_size=1, color='grey')
-            if j in [2, 5, 9, 10]:
+            if j in [0, 4, 5, 6]:
                 lines[j].set_data(linepos[j], marker_size=1, color=bcolor)
-            elif j in [1, 4, 7, 8]:
+            elif j in [3, 7, 9, 11]:
                 lines[j].set_data(linepos[j], marker_size=1, color=fcolor)
 
 
@@ -209,10 +209,12 @@ def camera():
 #    view.camera = 'turntable'
 #    view.camera = 'perspective'
     view.camera = 'arcball'
-    view.camera.center = (0, 0, 0.5)
-    view.camera.distance = 90
+    view.camera.center = (0, -dcamera, 0)
+    view.camera.distance = dcamera
 #   view.camera.set_range(x=(-0.5, 1))
-    view.camera.fov = (1)
+#    fov = np.degrees(2*np.arctan(0.9/(2*dcamera))) #probably not correct, keeps size the
+#    same
+    view.camera.fov = (36)
 
 
 camera()
@@ -224,7 +226,7 @@ if __name__ == '__main__':
 # ---------------------------------------------------------------------------
 
 
-def make_still(fname, beta):
+def make_still(fname, beta, dcamera):
     """ Produces still images at a set beta
     **note: Vispy does not include the ability to take/save single frames of
     an animation. I am working on adding these features currently. For now this
@@ -238,16 +240,16 @@ def make_still(fname, beta):
     fname = fname + '_' + str(dimension) + 'D' + '_b' + str(int(beta*100))
 # -------------------------text and labels-----------------------------------
     text = visuals.Text(text="beta= %2.2f" % np.abs(beta), color="white",
-                        pos=(0, 0, 1.1), font_size=1000)
+                        pos=(-0.35, 0, -0.4), font_size=30)
     view.add(text)
     T = Transform(beta)
     if dimension == 1:
-        PTlength = T.PT(linepos, d, 0)
+        PTlength = T.PT(linepos, dcamera, 0)
         lengthPT = np.abs((PTlength[(npoints-1)] - PTlength[0]) /
                           (linepos0[0][(npoints-1), 0] - linepos0[0][0, 0]))
         lengthPT_text = visuals.Text(text="L= %2.2f L(rest)" % lengthPT,
                                      color="white", pos=(-0.4, 0, 0),
-                                     font_size=1000)
+                                     font_size=30)
         view.add(lengthPT_text)
         if LT:
             linepos1[0][:, 0] = linepos0[0][:, 0] / T.LT()[2]
@@ -257,10 +259,16 @@ def make_still(fname, beta):
                                        linepos0[0][0, 0]))
             lengthLT_text = visuals.Text(text="L= %2.2f L(rest)" % lengthLT,
                                          color="white", pos=(-0.4, 0, 0.5),
-                                         font_size=1000)
+                                         font_size=30)
             view.add(lengthLT_text)
+    elif dimension == 3:
+            textcam = visuals.Text(text="dcamera= %2.2f" % 2*dcamera,
+                                   color="white", pos=(0.3, 0, -0.4),
+                                   font_size=30)
+            view.add(textcam)
 # ---------------------------saves to file----------------------------------
     writer = imageio.get_writer(fname+'.gif')
+#    size = (700, 600)
     im = canvas.render()
     writer.append_data(im)
     update(2)
@@ -302,6 +310,6 @@ def make_anim(fname, gif=False):
 
 
 if anim == 0:
-    make_still(fname, beta)
+    make_still(fname, beta, dcamera)
 elif anim == 1:
     make_anim(fname)
